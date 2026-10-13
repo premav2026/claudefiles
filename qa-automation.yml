@@ -1,0 +1,49 @@
+name: QA Automation Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Install Playwright browsers
+        run: mvn -B exec:java -D exec.mainClass=com.microsoft.playwright.CLI -D exec.args="install --with-deps"
+
+      - name: Run tests
+        run: mvn -B test
+
+      - name: Upload Surefire test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 14
+
+      - name: Upload Playwright traces/screenshots (if configured)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            target/playwright-report/
+            test-output/
+          retention-days: 14
+          if-no-files-found: ignore
